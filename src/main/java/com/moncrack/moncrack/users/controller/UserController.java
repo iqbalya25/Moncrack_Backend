@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -28,7 +29,7 @@ public class UserController {
         return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
     }
 
-    @PostMapping
+    @PostMapping("/register")
     public ResponseEntity<User> createUser(@RequestBody User user) {
         User createdUser = userService.createUser(user);
         return ResponseEntity.ok(createdUser);
@@ -48,16 +49,15 @@ public class UserController {
 
     @GetMapping("/email/{email}")
     public ResponseEntity<User> findByEmail(@PathVariable String email) {
-        User user = userService.findByEmail(email);
-        return user != null ? ResponseEntity.ok(user) : ResponseEntity.notFound().build();
+        Optional<User> user = userService.findByEmail(email);
+        return user.isPresent() ? ResponseEntity.ok(user.get()) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        User user = userService.findByEmail(loginRequest.getEmail());
-        // Implement your own password checking logic here if needed
-        if (user != null && user.getPasswordHash().equals(loginRequest.getPassword())) {
-            return ResponseEntity.ok(user);  // Hanya mengembalikan user jika autentikasi berhasil
+        Optional<User> userOptional = userService.findByEmail(loginRequest.getEmail());
+        if (userOptional.isPresent() && userOptional.get().getPasswordHash().equals(loginRequest.getPassword())) {
+            return ResponseEntity.ok(userOptional.get());  // Return user if authentication is successful
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed: Invalid email or password");
     }

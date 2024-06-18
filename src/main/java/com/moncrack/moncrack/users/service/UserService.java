@@ -2,6 +2,7 @@ package com.moncrack.moncrack.users.service;
 
 import com.moncrack.moncrack.users.entity.User;
 import java.util.List;
+import java.util.Optional;
 
 public interface UserService {
 
@@ -15,7 +16,7 @@ public interface UserService {
 
     void deleteUser(Long id);
 
-    User findByEmail(String email);
+    Optional<User> findByEmail(String email);
 
 //    boolean checkUserCredentials(String email, String password);
 }

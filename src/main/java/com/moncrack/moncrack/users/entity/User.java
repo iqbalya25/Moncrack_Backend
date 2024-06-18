@@ -52,6 +52,10 @@ public class User {
     protected void onUpdate() {
         updatedAt = new Timestamp(System.currentTimeMillis());
     }
+
+    public String getPassword() {
+        return passwordHash;
+    }
 }
 
 //    // Field untuk relasi dengan Wallet, diaktifkan kembali dengan komentar penjelas
