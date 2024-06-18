@@ -29,8 +29,10 @@ import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.KeySpec;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
@@ -85,6 +87,15 @@ public class AuthConfig {
         return NimbusJwtDecoder.withPublicKey(publicKey).build();
     }
 
+    @Bean
+    public JwtEncoder jwtEncoder() throws Exception{
+        RSAPrivateKey privateKey = loadPrivateKey();
+        RSAPublicKey publicKey = loadPublicKey();
+        JWK jwk = new RSAKey.Builder(publicKey).privateKey(privateKey).build();
+        JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(new JWKSet(jwk));
+        return new NimbusJwtEncoder(jwkSource);
+    }
+
     private RSAPublicKey loadPublicKey() throws Exception {
         ClassPathResource resource = new ClassPathResource("certs/public-key.pem");
         try (InputStream inputStream = resource.getInputStream()) {
@@ -96,6 +107,21 @@ public class AuthConfig {
             KeySpec keySpec = new X509EncodedKeySpec(keyBytes);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return (RSAPublicKey) keyFactory.generatePublic(keySpec);
+        }
+
+    }
+
+    private RSAPrivateKey loadPrivateKey() throws Exception {
+        ClassPathResource resource = new ClassPathResource("certs/private-key.pem");
+        try (InputStream inputStream = resource.getInputStream()){
+            String key = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8)
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+            byte[] keyBytes = Base64.getDecoder().decode(key);
+            KeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            return (RSAPrivateKey) keyFactory.generatePrivate(keySpec);
         }
     }
 

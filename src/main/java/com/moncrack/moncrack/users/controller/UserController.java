@@ -2,11 +2,16 @@ package com.moncrack.moncrack.users.controller;
 
 import com.moncrack.moncrack.users.entity.User;
 import com.moncrack.moncrack.users.service.UserService;
+import org.antlr.v4.runtime.Token;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.JwtClaimsSet;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +21,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtEncoder jwtEncoder;
 
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers() {
@@ -57,10 +65,24 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         Optional<User> userOptional = userService.findByEmail(loginRequest.getEmail());
         if (userOptional.isPresent() && userOptional.get().getPasswordHash().equals(loginRequest.getPassword())) {
-            return ResponseEntity.ok(userOptional.get());  // Return user if authentication is successful
+            String token = generateToken(userOptional.get());
+            return ResponseEntity.ok(new AuthResponse(token));  // Return user if authentication is successful
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login failed: Invalid email or password");
     }
+
+    private String generateToken(User user){
+        Instant now = Instant.now();
+        JwtClaimsSet claims = JwtClaimsSet.builder()
+                .issuer("self")
+                .issuedAt(now)
+                .expiresAt(now.plusSeconds(3600))
+                .subject(user.getEmail())
+                .claim("scope","ROLE_USER")
+                .build();
+        return this.jwtEncoder.encode(JwtEncoderParameters.from(claims)).getTokenValue();
+    }
+
 
     // DTO untuk menerima data login
     static class LoginRequest {
@@ -81,6 +103,23 @@ public class UserController {
 
         public void setPassword(String password) {
             this.password = password;
+        }
+    }
+
+    // DTO for authentication response
+    static class AuthResponse {
+        private String token;
+
+        public AuthResponse(String token) {
+            this.token = token;
+        }
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
         }
     }
 }
